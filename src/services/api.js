@@ -1,25 +1,4 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'https://myquizapp-backend.onrender.com';
-
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Auto attach authorization token if present
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+import apiClient from './axiosConfig';
 
 export const authAPI = {
   login: async (email, password) => {

@@ -13,7 +13,7 @@ import {
   RefreshCw,
   Search
 } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../services/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminQuizDetails() {
@@ -31,9 +31,7 @@ export default function AdminQuizDetails() {
     try {
       setLoading(true);
       setError('');
-      const res = await axios.get('http://localhost:8081/quiz/getAllUserDetails', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiClient.get('/quiz/getAllUserDetails');
       
       const backendLogs = res.data || [];
 

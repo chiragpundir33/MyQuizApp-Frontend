@@ -15,7 +15,7 @@ import {
   BookOpen,
   Trash2
 } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../services/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { assignmentAPI } from '../services/api';
 
@@ -40,9 +40,7 @@ export default function AdminUsers() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:8081/user/getAllUser', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiClient.get('/user/getAllUser');
       setUsers(res.data || []);
     } catch (err) {
       console.error(err);
@@ -54,9 +52,7 @@ export default function AdminUsers() {
 
   const fetchQuizzes = async () => {
     try {
-      const res = await axios.get('http://localhost:8081/quiz/getAll', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiClient.get('/quiz/getAll');
       setQuizzes(res.data || []);
     } catch (err) {
       console.error('Error fetching quizzes:', err);
@@ -103,11 +99,9 @@ export default function AdminUsers() {
     try {
       const updatedStatus = userRecord.isActive === false ? true : false;
       
-      await axios.put(`http://localhost:8081/user/update/${userRecord.id}`, {
+      await apiClient.put(`/user/update/${userRecord.id}`, {
         name: userRecord.name,
         isActive: updatedStatus
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       setSuccess(`User "${userRecord.name}" status updated to ${updatedStatus ? 'ACTIVE' : 'INACTIVE'}.`);

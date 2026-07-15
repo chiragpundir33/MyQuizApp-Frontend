@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, BookOpen, HelpCircle, Trophy, ArrowRight, ClipboardCheck } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../services/axiosConfig';
 import StatCard from '../components/StatCard';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
@@ -22,9 +22,7 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         // Fetch all users
-        const usersRes = await axios.get('http://localhost:8081/user/getAllUser', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const usersRes = await apiClient.get('/user/getAllUser');
         setUsers(usersRes.data || []);
         setUserCount((usersRes.data || []).length);
 
@@ -33,21 +31,15 @@ export default function AdminDashboard() {
         setAssignments(assignmentsRes || []);
 
         // Fetch all quizzes
-        const quizzesRes = await axios.get('http://localhost:8081/quiz/getAll', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const quizzesRes = await apiClient.get('/quiz/getAll');
         setQuizCount((quizzesRes.data || []).length);
 
         // Fetch all questions
-        const questionsRes = await axios.get('http://localhost:8081/question/getAll', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const questionsRes = await apiClient.get('/question/getAll');
         setQuestionCount((questionsRes.data || []).length);
 
         // Fetch all user details to calculate highest scores
-        const detailsRes = await axios.get('http://localhost:8081/quiz/getAllUserDetails', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const detailsRes = await apiClient.get('/quiz/getAllUserDetails');
         const detailsLogs = detailsRes.data || [];
 
         const topScorers = {};

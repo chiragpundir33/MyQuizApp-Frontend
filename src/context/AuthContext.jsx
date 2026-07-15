@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { authAPI, quizAPI } from '../services/api';
-import axios from 'axios';
+import apiClient from '../services/axiosConfig';
 
 const AuthContext = createContext(null);
 
@@ -38,9 +38,7 @@ export const AuthProvider = ({ children }) => {
             const role = decoded.role;
             
             // Query all users to find matching user and resolve ID
-            const usersResponse = await axios.get('https://myquizapp-backend.onrender.com/user/getAllUser', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
+            const usersResponse = await apiClient.get('/user/getAllUser');
             const allUsers = usersResponse.data;
             const matchedUser = allUsers.find(u => u.email === email);
             
