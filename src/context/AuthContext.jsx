@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
             const role = decoded.role;
             
             // Query all users to find matching user and resolve ID
-            const usersResponse = await axios.get('http://localhost:8081/user/getAllUser', {
+            const usersResponse = await axios.get('https://myquizapp-backend.onrender.com/user/getAllUser', {
               headers: { Authorization: `Bearer ${token}` }
             });
             const allUsers = usersResponse.data;
