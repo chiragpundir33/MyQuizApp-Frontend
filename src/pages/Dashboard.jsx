@@ -12,7 +12,11 @@ import {
   BellOff,
   Check,
   Clock,
-  Play
+  Play,
+  Sparkles,
+  AlertCircle,
+  ArrowRight,
+  X
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -28,6 +32,23 @@ import { quizAPI, notificationAPI, assignmentAPI } from '../services/api';
 import StatCard from '../components/StatCard';
 import { Link, useNavigate } from 'react-router-dom';
 
+const YoutubeIcon = ({ size = 24, className = '', fill = 'none' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill={fill === 'currentColor' ? 'currentColor' : 'none'}
+    stroke={fill === 'currentColor' ? 'none' : 'currentColor'}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" fill="currentColor" />
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="white" />
+  </svg>
+);
+
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -41,6 +62,72 @@ export default function Dashboard() {
   const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [startingQuizId, setStartingQuizId] = useState(null);
+
+  // YouTube Quiz Generation States
+  const [videoUrl, setVideoUrl] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [genStatus, setGenStatus] = useState('');
+  const [genError, setGenError] = useState('');
+  const [generatedQuiz, setGeneratedQuiz] = useState(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+
+  const handleGenerateQuiz = async (e) => {
+    e.preventDefault();
+    if (!videoUrl) return;
+    setGenerating(true);
+    setGenStatus('Analyzing URL...');
+    setGenError('');
+    setGeneratedQuiz(null);
+
+    const statusSteps = [
+      'Fetching video details...',
+      'Retrieving transcript via Supadata...',
+      'Analyzing transcript with Gemini AI...',
+      'Summarizing key takeaways...',
+      'Creating interactive quiz questions...',
+      'Finalizing your quiz portal...'
+    ];
+
+    let stepIdx = 0;
+    const interval = setInterval(() => {
+      if (stepIdx < statusSteps.length - 1) {
+        stepIdx++;
+        setGenStatus(statusSteps[stepIdx]);
+      }
+    }, 4500);
+
+    try {
+      setGenStatus(statusSteps[0]);
+      const res = await quizAPI.generateFromVideo(videoUrl);
+      clearInterval(interval);
+      setGeneratedQuiz(res);
+      setShowSummaryModal(true);
+      setVideoUrl('');
+      fetchNotificationsAndAssignments();
+    } catch (err) {
+      clearInterval(interval);
+      console.error('Error generating quiz:', err);
+      setGenError(err.response?.data?.message || err.message || 'Failed to generate quiz. Verify API keys and video URL.');
+    } finally {
+      setGenerating(false);
+      setGenStatus('');
+    }
+  };
+
+  const handleStartGeneratedQuiz = async () => {
+    if (!user?.id || !generatedQuiz?.id) return;
+    try {
+      const attempt = await quizAPI.startQuiz(user.id, generatedQuiz.id);
+      if (attempt && attempt.id) {
+        navigate(`/play-quiz/${attempt.id}`);
+      } else {
+        alert('Failed to start quiz attempt.');
+      }
+    } catch (err) {
+      console.error('Error starting generated quiz:', err);
+      alert('Error initializing quiz attempt.');
+    }
+  };
 
   const fetchNotificationsAndAssignments = async () => {
     if (!user?.id) return;
@@ -165,6 +252,81 @@ export default function Dashboard() {
           Take a Quiz
           <BookOpen size={16} />
         </Link>
+      </motion.div>
+
+      {/* YouTube Video Quiz Generator Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-slate-900 via-indigo-950/20 to-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden group"
+      >
+        <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500">
+          <YoutubeIcon size={120} className="text-red-500" fill="currentColor" />
+        </div>
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-2 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                <YoutubeIcon size={12} fill="currentColor" />
+                AI Video Quiz
+              </span>
+              <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles size={12} />
+                Gemini Powered
+              </span>
+            </div>
+            <h3 className="font-extrabold text-xl text-white">Generate Quiz from YouTube Video</h3>
+            <p className="text-slate-400 text-sm">
+              Enter any YouTube video URL. We will extract its transcript, generate a summary, and compile a 5-question quiz to test your comprehension.
+            </p>
+          </div>
+
+          <form onSubmit={handleGenerateQuiz} className="flex-1 w-full max-w-lg space-y-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="url"
+                required
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+                disabled={generating}
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-650 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-55"
+              />
+              <button
+                type="submit"
+                disabled={generating || !videoUrl}
+                className="px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50"
+              >
+                {generating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    Generate Quiz
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </div>
+
+            {generating && genStatus && (
+              <p className="text-purple-400 text-xs flex items-center gap-2 animate-pulse">
+                <Sparkles size={14} className="animate-spin" />
+                <span>{genStatus}</span>
+              </p>
+            )}
+
+            {genError && (
+              <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{genError}</span>
+              </div>
+            )}
+          </form>
+        </div>
       </motion.div>
 
       {/* Grid of stats */}
@@ -440,6 +602,74 @@ export default function Dashboard() {
           </div>
         </motion.div>
       </div>
+
+      {/* Summary and Quiz Starter Modal */}
+      {showSummaryModal && generatedQuiz && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+              <div className="space-y-1">
+                <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider">
+                  Quiz Created Successfully
+                </span>
+                <h3 className="font-extrabold text-lg text-white line-clamp-1">{generatedQuiz.title}</h3>
+              </div>
+              <button
+                onClick={() => setShowSummaryModal(false)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 text-sm leading-relaxed">
+              <div className="space-y-3">
+                <h4 className="font-extrabold text-slate-200 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-purple-400" />
+                  Video Summary & Context
+                </h4>
+                <div className="p-5 bg-slate-950/50 border border-slate-850 rounded-2xl whitespace-pre-line text-slate-300">
+                  {generatedQuiz.summary}
+                </div>
+              </div>
+
+              <div className="p-4 bg-purple-500/5 border border-purple-500/15 rounded-2xl flex items-start gap-3">
+                <Trophy size={20} className="text-purple-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h5 className="font-bold text-slate-200 text-xs">Ready to test your performance?</h5>
+                  <p className="text-slate-400 text-xs">
+                    This quiz features 5 multiple-choice questions curated directly from this video context. Try to score at least 40% to pass!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-slate-800 bg-slate-950/30 flex justify-end gap-3">
+              <button
+                onClick={() => setShowSummaryModal(false)}
+                className="px-5 py-2.5 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-800/50 transition-all font-bold text-sm"
+              >
+                Maybe Later
+              </button>
+              <button
+                onClick={handleStartGeneratedQuiz}
+                className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-500/25 transition-all flex items-center gap-1.5"
+              >
+                Start Quiz Now
+                <Play size={12} fill="currentColor" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

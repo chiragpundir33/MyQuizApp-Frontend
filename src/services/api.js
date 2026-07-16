@@ -16,6 +16,10 @@ export const quizAPI = {
     const response = await apiClient.get('/quiz/getAll');
     return response.data;
   },
+  generateFromVideo: async (videoUrl) => {
+    const response = await apiClient.post('/quiz/generate-from-video', { videoUrl });
+    return response.data;
+  },
   getById: async (id) => {
     const response = await apiClient.get(`/quiz/getById/${id}`);
     return response.data;
